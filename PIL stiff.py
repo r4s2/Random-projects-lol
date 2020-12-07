@@ -1,4 +1,4 @@
-from pip._vendor import requests
+import requests
 spaceShips = requests.get("https://swapi.dev/api/starships/").json()
 ships = []
 
