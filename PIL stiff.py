@@ -11,14 +11,14 @@ class Starship():
     def printStats(self):
         print(self.name)
         for name in self.pilots:
-            print(requests.get(name).json()['name'])
-
+            reseacrh_pilot =requests.get(name).json()
+            print(reseacrh_pilot['name'],reseacrh_pilot['height'])
+           
 
 for ship in spaceShips['results']:
     currentShip = len(ships)
     ships.append('a')
     ships[currentShip] = Starship(ship['name'], ship['pilots'])
     ships[currentShip].printStats()
-
     print("\n")
     
