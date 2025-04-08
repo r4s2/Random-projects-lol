@@ -4,6 +4,7 @@ import time
 import math
 import smtplib
 import customtkinter as ctk
+from PIL import Image, ImageTk 
 
 # ---------------------------------------------------------------------------------------- send messages 
 
@@ -109,7 +110,6 @@ def create_total_assessment():
     
     # Loop over the top gainers and assess risk
     for stock in todays_top:
-
         # Create a new object and button for the stock
         AnalyzedStock( stock, [risk_assess(stock, 7)[2], risk_assess(stock, 1)[2]], [risk_assess(stock, 7)[0], risk_assess(stock, 1)[0]], [risk_assess(stock, 7)[1], risk_assess(stock, 1)[1]] )
     
@@ -133,7 +133,9 @@ frame2 = ctk.CTkScrollableFrame(root)                                           
 gainers = ctk.CTkButton(button_frame, text = "Find top", command=top_gainers)                      #
 assess = ctk.CTkButton(button_frame, text = "Create Assessment", command=create_total_assessment)  #
 quit = ctk.CTkButton(button_frame, text = 'End Lowell', command=exit)                              #
-main_display_text = ctk.CTkLabel(frame2, text = '')                                                #
+gif_label = ctk.CTkLabel(button_frame, text="")                                                    #
+main_display_text = ctk.CTkLabel(frame2, text = "")    
+                                                                                                   #
 #--------------------------------------------------------------------------------------------------
 
 #button frame elements --------------------------------------------------------------------------------
@@ -141,7 +143,24 @@ button_frame.pack(padx=10, pady=10, side="left", fill="both", expand = True)
 gainers.pack(padx=10, pady=10, side = "top")
 assess.pack(padx=10, pady=10, side = "top")
 quit.pack(padx=10, pady=10, side = "top")
+gif_label.pack(padx=20, pady=20, side = "bottom")
 
+# Lowell Gif Stuff lol 
+gif_image = Image.open("/Users/rehansha/Desktop/Coding/random-projects-lol/Lowell/pixilart-drawing.gif")
+frames = []
+try:
+    while True:
+        gif_image.seek(gif_image.tell() + 1)
+        frames.append(ImageTk.PhotoImage(gif_image))
+except EOFError:
+    pass
+def update_gif(frame_index):
+    if frame_index < len(frames):
+        gif_label.configure(image=frames[frame_index])
+        button_frame.after(gif_image.info['duration'], lambda: update_gif(frame_index + 1))
+    else:
+        button_frame.after(gif_image.info['duration'], lambda: update_gif(0))
+        
 #scroll frame elements --------------------------------------------------------------------------------
 frame2.pack(padx=10, pady=10, side="right", fill="both", expand = True)
 
@@ -200,7 +219,7 @@ class AnalyzedStock():
         
 
 
-
+update_gif(0)
 root.mainloop()
 
 
