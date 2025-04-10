@@ -38,68 +38,52 @@ def top_gainers():
     for stock in avrequest.json()['top_gainers']:
         todays_top.append(stock['ticker'])
         main_display_text.configure(text = str(stock['ticker']))
-    print("found top gainers")
+    gainers.configure(text = "Found Top!")
+    time.sleep(0.5)
+    gainers.configure(text = "Find top")
     
 # ---------------------------------------------------------------------------------------- analyze the open-close changes 
 
-#assessing risk      FIX MODERATE RISK, the 1.0 value iS NOT WORKING WELL 
 def risk_assess(symbol, days):
     
     ticker = yf.Ticker(f"{symbol}")
     
     history = ticker.history(period=f'{days}d') 
     if history.empty: # check for no history 
-        print(f"DEBUG: {symbol} has no history data")
-        return([0, "nothing provided", "#ffffff"]) # error return
-        
-    changes = (history["Close"] - history["Open"]).tolist()
-    if not changes: # check for price change data 
-        print(f"DEBUG: {symbol} has no price change data")
-        return([0, "nothing provided", "#ffffff"])
+        return([0, "insufficient history", "#ffffff"]) # error return
 
     try:
-        least = min(changes)
-        greatest = max(changes)
+        changes = (history["Close"] - history["Open"]).tolist()
+        risk_ratio = abs(min(changes) / max(changes))
         
-        if greatest == 0.0:
-            print(f"DEBUG: {symbol} has no movement")
-            return([0, "nothing provided", "#ffffff"])
-        
-        risk_ratio = abs(least / greatest)
+        if risk_ratio > 1.75:
+            risk = "RISKY"
+            risk_color = "#e74c3c"
 
-    except Exception as e:
-        print(f"DEBUG: Error for {symbol} -> {str(e)}")
-        return([0, "nothing provided", "#ffffff"])
-    
-        
-    if risk_ratio > 1.75:
-        risk = "VERY RISKY"
-        risk_color = "#e74c3c"
+        elif risk_ratio > 1 and risk_ratio < 1.5: 
+            risk = "MODERATLEY RISKY"
+            risk_color = "#f39c12"
+            
+        elif risk_ratio == 1: 
+            risk = "Not enough data"
+            risk_color = "#ffffff"
+            
+        elif risk_ratio < 1 and risk_ratio > 0.5:
+            risk = "MODERATELY SAFE"
+            risk_color = "#a1eb17"
+            
+        elif risk_ratio < 0.5 and risk_ratio > 0.25: 
+            risk = "SAFE"
+            risk_color = "#44bd32"
 
-    elif risk_ratio > 1 and risk_ratio < 1.5: 
-        risk = "RISKY"
-        risk_color = "#f39c12"
+        elif risk_ratio < 0.25: 
+            risk = "VERY SAFE" 
+            risk_color = "#7bed9f"
         
-    elif risk_ratio == 1: 
-        risk = "Not enough data"
-        risk_color = "#ffffff"
+        return([risk_ratio, risk, risk_color])
         
-    elif risk_ratio < 1 and risk_ratio > 0.5:
-        risk = "MODERATELY SAFE"
-        risk_color = "#a1eb17"
-        
-    elif risk_ratio < 0.5 and risk_ratio > 0.25: 
-        risk = "SAFE"
-        risk_color = "#44bd32"
-
-    elif risk_ratio < 0.25: 
-        risk = "VERY SAFE" 
-        risk_color = "#7bed9f"
-        
-    else:
-        return(["error in information, unable to create profile", 6.9, "#ffffff"])
-        
-    return([risk_ratio, risk, risk_color])
+    except:
+        return([69, "insufficient or inoperable change data", "#ffffff"])
 
 def create_total_assessment():
 
