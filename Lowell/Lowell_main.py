@@ -76,15 +76,14 @@ from_email = 'rehan.sha0070@gmail.com'
 from_password = 'sesx ovio jaol lcxv' 
 to_number = '2069100070' 
 carrier_gateway = 'txt.att.net'  
-message = "Hello, this is a test SMS sent from Python!"
 
 # ---------------------------------------------------------------------------------------- find the top gainers
 
 api_key = "27O7Q6OP7I6N4YHE"
 reqlink = f"https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey={api_key}"
 avrequest = requests.get(reqlink)
-#todays_top = []
-todays_top = ['AAPL', "GOOGL", "META", "NVDA"]
+todays_top = []
+
 
 def top_gainers():
     for stock in avrequest.json()['top_gainers']:
@@ -155,6 +154,39 @@ def create_total_assessment():
     #send_sms_via_email(to_number, carrier_gateway, from_email, from_password, message)    
 assess.configure(command = create_total_assessment)
 
+def send_chosen_stocks(): 
+    message = ''
+    total_price = 0
+    to_buy_list = []
+    prices = []
+    
+    for widget in to_buy.winfo_children(): 
+        to_buy_list.append(widget.cget("text")[:str(widget.cget("text")).find(" "):])
+        prices.append((float(yf.Ticker(str(widget.cget("text"))[:str(widget.cget("text")).find(" "):]).history(period='1d')['Close'][0]) * float(str(widget.cget("text"))[(str(widget.cget("text")).find("*")+1):])))
+        total_price += float(yf.Ticker(str(widget.cget("text"))[:str(widget.cget("text")).find(" "):]).history(period='1d')['Close'][0]) * float(str(widget.cget("text"))[(str(widget.cget("text")).find("*")+1):])
+        
+        message += f"stock: {str(to_buy_list[-1])} \n price: {str(prices[-1])} \n\n"
+    message += str(total_price)
+     
+    preview = ctk.CTkToplevel(root)
+    preview.geometry("400x500") 
+    preview.title("Final Purchase Preview")
+    
+    preview_text_frame = ctk.CTkScrollableFrame(preview, width = '300') 
+    preview_text = ctk.CTkLabel(master = preview_text_frame, text = message)
+    cancel_button = ctk.CTkButton(preview, text = "Cancel", command = preview.destroy)
+    send_receipt = ctk.CTkButton(preview, text = "Send to Phone", command = lambda: send_sms_via_email(to_number, carrier_gateway, from_email, from_password, message))
+    
+      
+    preview_text_frame.pack(padx = 10, pady = 10, side = 'top')
+    preview_text.pack(padx = 10, pady = 10, side = "top")
+    cancel_button.pack(padx = 10, pady = 10)
+    send_receipt.pack(padx = 10, pady = 10)
+    
+    
+    
+purchase.configure(command = send_chosen_stocks)    
+
 # ---------------------------------------------------------------------------------------- create interface 
 
 
@@ -166,6 +198,7 @@ class AnalyzedStock():
         self.stock_name = stock_name
         self.risk_ratio = risk_ratio
         self.risk_ID = risk_ID
+        self.price = 0 
         self.stock_button = ctk.CTkButton(frame2, text = self.stock_name, fg_color = self.risk_color, command = self.sentiments_and_analysis, font = ("Arial", 15, "bold", ), text_color = "black")
         self.stock_button.pack(pady = 10, side = "top")
 
@@ -225,27 +258,38 @@ class AnalyzedStock():
             displayed_news = "No News or Sentiment Available"
             
         da_news.configure(text=displayed_news)
+
+
         
     #it's in the name 
     def move_to_buy_list(self):
-    
-        price = 0 
+        
         to_buy_list = [
             widget.cget("text")[:str(widget.cget("text")).find(" "):]
             for widget in to_buy.winfo_children() 
-        ]
+        ]        
         
         if self.stock_name not in to_buy_list: 
             name = str(self.stock_name) + " *" + str(purchase_quantity.get())
             listed_stock = ctk.CTkButton(to_buy, text = name, fg_color = "#27e4f5", hover_color="#ff7675", command = None, font = ("Arial", 15, "bold"))
-            listed_stock.configure(command = listed_stock.destroy)
+            
+            def destroy_list_item():
+                listed_stock.destroy()  
+                
+                self.price = 0
+                for widget in to_buy.winfo_children(): 
+                    string = str(widget.cget("text"))
+                    self.price += float(yf.Ticker(string[:string.find(" "):]).history(period='1d')['Close'][0]) * float(string[(string.find("*")+1):])  
+                purchase.configure(text= "Purchase at " + str(self.price)[:(str(self.price).find(".")+3)]) 
+                           
+            listed_stock.configure(command = destroy_list_item)
             listed_stock.pack(padx=10, pady=10, side='top')
             
         for widget in to_buy.winfo_children(): 
             string = str(widget.cget("text"))
-            price += float(yf.Ticker(string[:string.find(" "):]).history(period='1d')['Close'][0]) * float(string[(string.find("*")+1):])
+            self.price += float(yf.Ticker(string[:string.find(" "):]).history(period='1d')['Close'][0]) * float(string[(string.find("*")+1):])
         
-        purchase.configure(text= "Purchase at " + str(price)[:(str(price).find(".")+3)]) 
+        purchase.configure(text= "Purchase at " + str(self.price)[:(str(self.price).find(".")+3)]) 
                 
             
             
