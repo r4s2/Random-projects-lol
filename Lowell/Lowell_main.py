@@ -5,6 +5,21 @@ import math
 import smtplib
 import customtkinter as ctk
 from PIL import Image, ImageTk 
+import smtplib
+from email.mime.text import MIMEText
+import alpaca_trade_api as tradeapi
+
+#Alpaca Config ------------------------------------------------------------------------------------
+
+API_KEY = 'PK9CJ54RHMNWLOZH97BS'
+API_SECRET = 'kZEa7PQNWaMeVbrou3cLm0xIFd7KHul5JoeVSdPt'
+BASE_URL = 'https://paper-api.alpaca.markets'
+api = tradeapi.REST(API_KEY, API_SECRET, base_url=BASE_URL)
+account = api.get_account()
+
+
+
+#all instances ------------------------------------------------------------------------------------
 
 ctk.set_default_color_theme("green") 
 ctk.set_appearance_mode("dark")
@@ -14,7 +29,6 @@ root.title("Lowell")
 root.resizable(False, False)
 
 
-#all instances ------------------------------------------------------------------------------------
 #   frames                                                                                         
 button_frame = ctk.CTkFrame(root)                                                                  
 frame2 = ctk.CTkScrollableFrame(root)                                                              
@@ -48,6 +62,7 @@ try:
         frames.append(ImageTk.PhotoImage(gif_image))
 except EOFError:
     pass
+
 def update_gif(frame_index):
     if frame_index < len(frames):
         gif_label.configure(image=frames[frame_index])
@@ -60,24 +75,22 @@ frame2.pack(padx=10, pady=10, side="right", fill="both", expand = True)
 
 # ---------------------------------------------------------------------------------------- send messages 
 
-def send_sms_via_email(to_number, carrier_gateway, from_email, from_password, message):
+def send_msg(message):
+    sender_email = "rehan.sha0070@gmail.com"
+    app_password = "sesx ovio jaol lcxv"  # Not your normal password
+    receiver_email = "2069100070@txt.att.net"
 
-    server = smtplib.SMTP('smtp.gmail.com', 587)  
-    server.starttls()
-    server.login(from_email, from_password)
+    msg = MIMEText(message)
+    msg["Subject"] = "Test Email"
+    msg["From"] = sender_email
+    msg["To"] = receiver_email
+    
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(sender_email, app_password)
+        server.send_message(msg)
 
 
-    to_email = f"{to_number}@{carrier_gateway}"
-    server.sendmail(from_email, to_email, message)
-    server.quit()
-    print("Message sent successfully!")
-
-from_email = 'rehan.sha0070@gmail.com' 
-from_password = 'sesx ovio jaol lcxv' 
-to_number = '2069100070' 
-carrier_gateway = 'txt.att.net'  
-
-# ---------------------------------------------------------------------------------------- find the top gainers
+# ---------------------------------------------------------------------------------------- functions
 
 api_key = "27O7Q6OP7I6N4YHE"
 reqlink = f"https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey={api_key}"
@@ -91,11 +104,8 @@ def top_gainers():
             todays_top.append(stock['ticker'][:-1:])
         else:
             todays_top.append(stock['ticker'])
-        
 gainers.configure(command = top_gainers)  
     
-# ---------------------------------------------------------------------------------------- analyze the open-close changes 
-
 def risk_assess(symbol, days): 
     
     ticker = yf.Ticker(f"{symbol}")
@@ -155,7 +165,7 @@ def create_total_assessment():
 assess.configure(command = create_total_assessment)
 
 def send_chosen_stocks(): 
-    message = ''
+    message = '\n'
     total_price = 0
     to_buy_list = []
     prices = []
@@ -175,21 +185,16 @@ def send_chosen_stocks():
     preview_text_frame = ctk.CTkScrollableFrame(preview, width = '300') 
     preview_text = ctk.CTkLabel(master = preview_text_frame, text = message)
     cancel_button = ctk.CTkButton(preview, text = "Cancel", command = preview.destroy)
-    send_receipt = ctk.CTkButton(preview, text = "Send to Phone", command = lambda: send_sms_via_email(to_number, carrier_gateway, from_email, from_password, message))
+    send_receipt = ctk.CTkButton(preview, text = "Send to Phone", command = lambda: send_msg(message))
     
       
     preview_text_frame.pack(padx = 10, pady = 10, side = 'top')
     preview_text.pack(padx = 10, pady = 10, side = "top")
     cancel_button.pack(padx = 10, pady = 10)
     send_receipt.pack(padx = 10, pady = 10)
-    
-    
-    
 purchase.configure(command = send_chosen_stocks)    
 
 # ---------------------------------------------------------------------------------------- create interface 
-
-
 
 #stock template
 class AnalyzedStock():
@@ -271,7 +276,7 @@ class AnalyzedStock():
         
         if self.stock_name not in to_buy_list: 
             name = str(self.stock_name) + " *" + str(purchase_quantity.get())
-            listed_stock = ctk.CTkButton(to_buy, text = name, fg_color = "#27e4f5", hover_color="#ff7675", command = None, font = ("Arial", 15, "bold"))
+            listed_stock = ctk.CTkButton(to_buy, text = name, fg_color = "#1B9CFC", hover_color="#FC427B", command = None, font = ("Arial", 15, "bold"))
             
             def destroy_list_item():
                 listed_stock.destroy()  
