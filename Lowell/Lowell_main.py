@@ -9,6 +9,7 @@ import smtplib
 from email.mime.text import MIMEText
 import alpaca_trade_api as tradeapi
 
+
 #Alpaca Config ------------------------------------------------------------------------------------
 
 API_KEY = 'PK9CJ54RHMNWLOZH97BS'
@@ -30,27 +31,35 @@ root.resizable(False, False)
 
 
 #   frames                                                                                         
-button_frame = ctk.CTkFrame(root)                                                                  
-frame2 = ctk.CTkScrollableFrame(root)                                                              
+button_frame = ctk.CTkFrame(root) 
+left_frame = ctk.CTkFrame(root)                                                                 
+                                                             
                                                                                                    
 #   elements                                                                                       
 gainers = ctk.CTkButton(button_frame, text = "Find top", command=None)                      
 assess = ctk.CTkButton(button_frame, text = "Create Assessment", command=None)  
 to_buy = ctk.CTkScrollableFrame(button_frame, label_text= "Buy List")
 purchase = ctk.CTkButton(button_frame, text="Buy")
+sell = ctk.CTkButton(button_frame, text="Sell")
 quit = ctk.CTkButton(button_frame, text = 'End Lowell', command=exit)                              
 gif_label = ctk.CTkLabel(button_frame, text="")                                                    
-                                                                                                   
-#--------------------------------------------------------------------------------------------------
+frame2 = ctk.CTkScrollableFrame(left_frame)  
+current_situation_frame = ctk.CTkScrollableFrame(left_frame, label_text = str(account.equity), label_font=("Arial", 30, "bold"))                                                                                  
 
-#button frame elements --------------------------------------------------------------------------------
+
 button_frame.pack(padx=10, pady=10, side="left", fill="both", expand = True)
 gainers.pack(padx=10, pady=10, side = "top")
 assess.pack(padx=10, pady=10, side = "top")
 to_buy.pack(padx=10, pady=10, side = "top")
 purchase.pack(padx=10, pady=10, side= "top")
+sell.pack(padx=10, pady=10, side= "top")
 quit.pack(padx=10, pady=10, side = "bottom")
 gif_label.pack(padx=20, pady=20, side = "bottom")
+
+left_frame.pack(padx=10, pady=10, fill = 'both', expand = True)
+frame2.pack(padx=20, pady=20, side = "top", fill='both')
+current_situation_frame.pack(padx=20, pady=20, side = "top", fill='both')
+
 
 
 # Lowell Gif Stuff lol 
@@ -60,6 +69,7 @@ try:
     while True:
         gif_image.seek(gif_image.tell() + 1)
         frames.append(ImageTk.PhotoImage(gif_image))
+        
 except EOFError:
     pass
 
@@ -69,9 +79,42 @@ def update_gif(frame_index):
         button_frame.after(gif_image.info['duration'], lambda: update_gif(frame_index + 1))
     else:
         button_frame.after(gif_image.info['duration'], lambda: update_gif(0))
-        
-#scroll frame elements --------------------------------------------------------------------------------
-frame2.pack(padx=10, pady=10, side="right", fill="both", expand = True)
+    
+    green_gradient = [
+        "#FFFFFF",
+        "#E9FBEA",
+        "#D3F7D5",
+        "#BDF3C0",
+        "#A7EFAB",
+        "#91EB96",
+        "#7BE781",
+        "#65E36C",
+        "#4FDF57",
+        "#65EB67"
+    ]
+
+    red_gradient = [
+        "#FFFFFF",
+        "#FDE9EB",
+        "#FBD3D7",
+        "#F9BDC3",
+        "#F7A7AF",
+        "#F5919B",
+        "#F37B87",
+        "#F16573",
+        "#EF4F5F",
+        "#F2525D"
+    ]
+
+    if (float(account.equity) - float(account.last_equity)) < 0: 
+        for index, item in enumerate(red_gradient):
+            current_situation_frame.configure(label_text_color = item)
+            time.sleep(0.01)
+    
+    else:
+        for index, item in enumerate(green_gradient):
+            current_situation_frame.configure(label_text_color = item)
+            time.sleep(0.01)
 
 # ---------------------------------------------------------------------------------------- send messages 
 
@@ -95,10 +138,11 @@ def send_msg(message):
 api_key = "27O7Q6OP7I6N4YHE"
 reqlink = f"https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey={api_key}"
 avrequest = requests.get(reqlink)
-todays_top = []
+todays_top = ["AAPL"]
 
 
 def top_gainers():
+    todays_top.clear()
     for stock in avrequest.json()['top_gainers']:
         if "+" in stock['ticker'] or "^" in stock['ticker']:
             todays_top.append(stock['ticker'][:-1:])
@@ -192,7 +236,25 @@ def send_chosen_stocks():
     preview_text.pack(padx = 10, pady = 10, side = "top")
     cancel_button.pack(padx = 10, pady = 10)
     send_receipt.pack(padx = 10, pady = 10)
-purchase.configure(command = send_chosen_stocks)    
+#purchase.configure(command = send_chosen_stocks)    
+
+final_order = []
+def BUYBUYBUY(): 
+
+    for i in final_order:
+        api.submit_order(
+            symbol=i[0],    
+            qty=i[1],            
+            side='buy',      
+            type='market',   
+            time_in_force='gtc'  
+            )
+purchase.configure(command = BUYBUYBUY)    
+
+def SELLSELLSELL():
+    api.close_all_positions() 
+    final_order.clear()
+sell.configure(command = SELLSELLSELL)    
 
 # ---------------------------------------------------------------------------------------- create interface 
 
@@ -269,23 +331,35 @@ class AnalyzedStock():
     #it's in the name 
     def move_to_buy_list(self):
         
+        
+        
         to_buy_list = [
             widget.cget("text")[:str(widget.cget("text")).find(" "):]
             for widget in to_buy.winfo_children() 
         ]        
+
         
         if self.stock_name not in to_buy_list: 
             name = str(self.stock_name) + " *" + str(purchase_quantity.get())
             listed_stock = ctk.CTkButton(to_buy, text = name, fg_color = "#1B9CFC", hover_color="#FC427B", command = None, font = ("Arial", 15, "bold"))
+            final_order.append([self.stock_name, purchase_quantity.get()])
             
             def destroy_list_item():
+                for i in final_order:
+                    if self.stock_name in i:
+                        final_order.remove(i)
                 listed_stock.destroy()  
+                
                 
                 self.price = 0
                 for widget in to_buy.winfo_children(): 
                     string = str(widget.cget("text"))
                     self.price += float(yf.Ticker(string[:string.find(" "):]).history(period='1d')['Close'][0]) * float(string[(string.find("*")+1):])  
-                purchase.configure(text= "Purchase at " + str(self.price)[:(str(self.price).find(".")+3)]) 
+                
+                if self.price == 0: 
+                    purchase.configure(text = "Buy")
+                else:    
+                    purchase.configure(text= "Purchase at " + str(self.price)[:(str(self.price).find(".")+3)]) 
                            
             listed_stock.configure(command = destroy_list_item)
             listed_stock.pack(padx=10, pady=10, side='top')
