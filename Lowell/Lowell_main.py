@@ -1,6 +1,7 @@
 import requests
 import yfinance as yf
-import time
+from datetime import datetime, timedelta
+import pytz
 import math
 import smtplib
 import customtkinter as ctk
@@ -8,7 +9,14 @@ from PIL import Image, ImageTk
 import smtplib
 from email.mime.text import MIMEText
 import alpaca_trade_api as tradeapi
-
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockBarsRequest
+from alpaca.data.timeframe import TimeFrame
+from alpaca.data.live import StockDataStream
+from alpaca.data.historical import StockHistoricalDataClient
 
 #Alpaca Config ------------------------------------------------------------------------------------
 
@@ -16,9 +24,8 @@ API_KEY = 'PK9CJ54RHMNWLOZH97BS'
 API_SECRET = 'kZEa7PQNWaMeVbrou3cLm0xIFd7KHul5JoeVSdPt'
 BASE_URL = 'https://paper-api.alpaca.markets'
 api = tradeapi.REST(API_KEY, API_SECRET, base_url=BASE_URL)
+trading_client = TradingClient(API_KEY, API_SECRET)
 account = api.get_account()
-
-
 
 #all instances ------------------------------------------------------------------------------------
 
@@ -63,24 +70,7 @@ current_situation_frame.pack(padx=20, pady=20, side = "top", fill='both')
 
 
 # Lowell Gif Stuff lol 
-gif_image = Image.open("/Users/rehansha/Desktop/Coding/random-projects-lol/Lowell/pixilart-drawing.gif")
-frames = []
-try:
-    while True:
-        gif_image.seek(gif_image.tell() + 1)
-        frames.append(ImageTk.PhotoImage(gif_image))
-        
-except EOFError:
-    pass
-
-def update_gif(frame_index):
-    if frame_index < len(frames):
-        gif_label.configure(image=frames[frame_index])
-        button_frame.after(gif_image.info['duration'], lambda: update_gif(frame_index + 1))
-    else:
-        button_frame.after(gif_image.info['duration'], lambda: update_gif(0))
-    
-    green_gradient = [
+green_gradient = [
         "#FFFFFF",
         "#E9FBEA",
         "#D3F7D5",
@@ -92,8 +82,7 @@ def update_gif(frame_index):
         "#4FDF57",
         "#65EB67"
     ]
-
-    red_gradient = [
+red_gradient = [
         "#FFFFFF",
         "#FDE9EB",
         "#FBD3D7",
@@ -105,16 +94,70 @@ def update_gif(frame_index):
         "#EF4F5F",
         "#F2525D"
     ]
+# STROBE EFFECT HERE I JUST NEED A PLACE TO PUT IT 
+# if (float(account.equity) - float(account.last_equity)) < 0: 
+#     for index, item in enumerate(red_gradient):
+#         current_situation_frame.configure(label_text_color = item)
+#         time.sleep(0.01)
 
-    if (float(account.equity) - float(account.last_equity)) < 0: 
-        for index, item in enumerate(red_gradient):
-            current_situation_frame.configure(label_text_color = item)
-            time.sleep(0.01)
-    
+# else:
+#     for index, item in enumerate(green_gradient):
+#         current_situation_frame.configure(label_text_color = item)
+#         time.sleep(0.01)
+
+
+gif_image = Image.open("/Users/rehansha/Desktop/Coding/random-projects-lol/Lowell/pixilart-drawing.gif")
+frames = []
+try:
+    while True:
+        gif_image.seek(gif_image.tell() + 1)
+        frames.append(ImageTk.PhotoImage(gif_image))      
+except EOFError:
+    pass
+def update_gif(frame_index):
+
+    if frame_index < len(frames):
+        current_situation_frame.configure(label_text = str(account.equity))
+        gif_label.configure(image=frames[frame_index])
+        button_frame.after(gif_image.info['duration'], lambda: update_gif(frame_index + 1))
+        
     else:
-        for index, item in enumerate(green_gradient):
-            current_situation_frame.configure(label_text_color = item)
-            time.sleep(0.01)
+        button_frame.after(gif_image.info['duration'], lambda: update_gif(0))
+
+
+for i in trading_client.get_all_positions():
+    
+    def sell_this_stock(symbol):
+        for i in current_situation_frame.winfo_children():
+            if i.cget("text") == str(symbol): 
+                i.destroy()
+        
+        market_order_data = MarketOrderRequest(
+                    symbol=symbol,
+                    qty=trading_client.get_open_position(symbol).qty,
+                    side=OrderSide.SELL,
+                    time_in_force=TimeInForce.DAY
+                    )
+            
+        market_order = trading_client.submit_order(
+            order_data=market_order_data
+               )
+        
+        api.submit_order(
+            symbol=symbol,    
+            qty= trading_client.get_open_position(symbol).qty,            
+            side='sell',      
+            type='market',   
+            time_in_force='gtc'
+        )
+        
+    try: 
+        owned_stock = ctk.CTkButton(current_situation_frame, fg_color = "#1B9CFC", hover_color="#FC427B", text = i.symbol)
+        owned_stock.configure(command= lambda: sell_this_stock(i.symbol))
+        owned_stock.pack(side='top', padx=10, pady=10)  
+    except: 
+        print("...")
+    
 
 # ---------------------------------------------------------------------------------------- send messages 
 
@@ -131,7 +174,6 @@ def send_msg(message):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(sender_email, app_password)
         server.send_message(msg)
-
 
 # ---------------------------------------------------------------------------------------- functions
 
@@ -241,6 +283,23 @@ def send_chosen_stocks():
 final_order = []
 def BUYBUYBUY(): 
 
+    def sell_this_stock(symbol):
+        for i in current_situation_frame.winfo_children():
+            if i.cget("text") == str(symbol): 
+                i.destroy()
+        
+        market_order_data = MarketOrderRequest(
+            symbol=symbol,
+            qty=trading_client.get_open_position(symbol).qty,
+            side=OrderSide.SELL,
+            time_in_force=TimeInForce.DAY
+            )
+            
+        market_order = trading_client.submit_order(
+            order_data=market_order_data
+               )
+
+        
     for i in final_order:
         api.submit_order(
             symbol=i[0],    
@@ -248,7 +307,16 @@ def BUYBUYBUY():
             side='buy',      
             type='market',   
             time_in_force='gtc'  
-            )
+            )    
+        
+        if i[0] not in current_situation_frame.winfo_children():
+            owned_stock = ctk.CTkButton(current_situation_frame, fg_color = "#1B9CFC", hover_color="#FC427B", text = i[0])
+            owned_stock.configure(command= lambda: sell_this_stock(owned_stock.cget("text")))
+            owned_stock.pack(side='top', padx=10, pady=10)
+    
+    for widget in to_buy.winfo_children(): 
+        widget.destroy() 
+        
 purchase.configure(command = BUYBUYBUY)    
 
 def SELLSELLSELL():
@@ -312,7 +380,6 @@ class AnalyzedStock():
         ratio_label_LT.pack(padx=10, pady=10, side = 'top')
 
         
-
         #news function
         news = yf.Ticker(self.stock_name).news
         displayed_news = ''
@@ -331,13 +398,10 @@ class AnalyzedStock():
     #it's in the name 
     def move_to_buy_list(self):
         
-        
-        
         to_buy_list = [
             widget.cget("text")[:str(widget.cget("text")).find(" "):]
             for widget in to_buy.winfo_children() 
         ]        
-
         
         if self.stock_name not in to_buy_list: 
             name = str(self.stock_name) + " *" + str(purchase_quantity.get())
