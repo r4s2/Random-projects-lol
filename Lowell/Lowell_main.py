@@ -1,6 +1,6 @@
 import requests
 import yfinance as yf
-from datetime import datetime, timedelta
+import time
 import pytz
 import math
 import smtplib
@@ -17,6 +17,7 @@ from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.data.live import StockDataStream
 from alpaca.data.historical import StockHistoricalDataClient
+import Lowell_Rebalance
 
 #Alpaca Config ------------------------------------------------------------------------------------
 
@@ -67,45 +68,6 @@ left_frame.pack(padx=10, pady=10, fill = 'both', expand = True)
 frame2.pack(padx=20, pady=20, side = "top", fill='both')
 current_situation_frame.pack(padx=20, pady=20, side = "top", fill='both')
 
-
-
-# Lowell Gif Stuff lol 
-green_gradient = [
-        "#FFFFFF",
-        "#E9FBEA",
-        "#D3F7D5",
-        "#BDF3C0",
-        "#A7EFAB",
-        "#91EB96",
-        "#7BE781",
-        "#65E36C",
-        "#4FDF57",
-        "#65EB67"
-    ]
-red_gradient = [
-        "#FFFFFF",
-        "#FDE9EB",
-        "#FBD3D7",
-        "#F9BDC3",
-        "#F7A7AF",
-        "#F5919B",
-        "#F37B87",
-        "#F16573",
-        "#EF4F5F",
-        "#F2525D"
-    ]
-# STROBE EFFECT HERE I JUST NEED A PLACE TO PUT IT 
-# if (float(account.equity) - float(account.last_equity)) < 0: 
-#     for index, item in enumerate(red_gradient):
-#         current_situation_frame.configure(label_text_color = item)
-#         time.sleep(0.01)
-
-# else:
-#     for index, item in enumerate(green_gradient):
-#         current_situation_frame.configure(label_text_color = item)
-#         time.sleep(0.01)
-
-
 gif_image = Image.open("/Users/rehansha/Desktop/Coding/random-projects-lol/Lowell/pixilart-drawing.gif")
 frames = []
 try:
@@ -123,6 +85,7 @@ def update_gif(frame_index):
         
     else:
         button_frame.after(gif_image.info['duration'], lambda: update_gif(0))
+
 
 
 for i in trading_client.get_all_positions():
@@ -435,8 +398,15 @@ class AnalyzedStock():
         purchase.configure(text= "Purchase at " + str(self.price)[:(str(self.price).find(".")+3)]) 
                 
             
-            
+#operations for every cycle            
 update_gif(0)
+
+portfolio = trading_client.get_all_positions()
+for position in portfolio:
+    if Lowell_Rebalance.rebalance(position.symbol, position.unrealized_intraday_pl, position.qty, position.current_price, True) == 0:
+        Lowell_Rebalance.rebalance(position.symbol, position.unrealized_intraday_pl, position.qty, position.current_price, False)
+
+
 root.mainloop()
 
 
